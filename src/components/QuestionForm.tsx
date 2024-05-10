@@ -10,14 +10,11 @@ import { Spinner } from "./svgs/Spinner";
 
 export function QuestionForm() {
   const [question, setQuestion] = useState<string>("");
-  const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isGeneratingStream1, setIsGeneratingStream1] = useState<boolean>(false);
   const [isGeneratingStream2, setIsGeneratingStream2] = useState<boolean>(false);
   const [weather, setWeather] = useState<string>("");
   const [news, setNews] = useState<string>("");
-  const [result, setResult] = useState<string>();
-
-
+  const isGenerating = isGeneratingStream1 || isGeneratingStream2;
 
   async function onSubmit(e: SyntheticEvent) {
     e.preventDefault();
@@ -27,37 +24,38 @@ export function QuestionForm() {
     setWeather("");
 
     const result = await streamAnswer(question);
-    const isGeneratingStream = readStreamableValue(result.isGenerating);
+    const isGeneratingStream1 = readStreamableValue(result.isGeneratingStream1);
+    const isGeneratingStream2 = readStreamableValue(result.isGeneratingStream2);
     const weatherStream = readStreamableValue(result.weatherStream);
     const newsStream = readStreamableValue(result.newsStream);
 
-    // Save all stream references.
-    setResult(result);
-
-    // setAnswerUI(result.answerUI);
+    (async () => {
+      for await (const value of isGeneratingStream1) {
+        if (value != null) {
+          setIsGeneratingStream1(value);
+        }
+      }
+    })();
 
     (async () => {
-      for await (const value of isGeneratingStream) {
+      for await (const value of isGeneratingStream2) {
         if (value != null) {
-          setIsGenerating(value);
+          setIsGeneratingStream2(value);
         }
       }
     })();
 
     (async () => {
       for await (const value of weatherStream) {
-        console.log(`---------------- weather: `, weather);
-        setWeather((existing) => existing + value as string);
+        setWeather((existing) => (existing + value) as string);
       }
     })();
 
     (async () => {
       for await (const value of newsStream) {
-        setNews((existing) => existing + value as string);
+        setNews((existing) => (existing + value) as string);
       }
     })();
-
-
   }
 
   return (
@@ -71,10 +69,12 @@ export function QuestionForm() {
         </div>
       ) : null}
 
-      <h3 className="font-bold">Today's Weather</h3>
-      <div className="mt-4 p-4 rounded-md shadow-md bg-blue-100">{weather ? weather : null}</div>
+      <h3 className="font-bold">Historical Weather</h3>
+      <div className="mt-4 mb-8 p-4 rounded-md shadow-md bg-blue-100">
+        {weather ? weather : null}
+      </div>
 
-      <h4 className="font-bold">Today's News</h4>
+      <h4 className="font-bold">Historical News</h4>
       <div className="mt-4 p-4 rounded-md shadow-md bg-green-100">{news ? news : null}</div>
     </form>
   );
