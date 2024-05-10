@@ -10,39 +10,60 @@ import { Spinner } from "./svgs/Spinner";
 
 export function QuestionForm() {
   const [question, setQuestion] = useState<string>("");
-  const [answer, setAnswer] = useState<Record<string, any> | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
-  const [answerUI, setAnswerUI] = useUIState()
+  const [isGeneratingStream1, setIsGeneratingStream1] = useState<boolean>(false);
+  const [isGeneratingStream2, setIsGeneratingStream2] = useState<boolean>(false);
+  const [weather, setWeather] = useState<string>("");
+  const [news, setNews] = useState<string>("");
+  const [result, setResult] = useState<string>();
 
-  function onChange(e: SyntheticEvent) {
-    setQuestion(e.target.value);
-  }
+
 
   async function onSubmit(e: SyntheticEvent) {
     e.preventDefault();
 
+    // Clear previous results.
+    setNews("");
+    setWeather("");
+
     const result = await streamAnswer(question);
     const isGeneratingStream = readStreamableValue(result.isGenerating);
+    const weatherStream = readStreamableValue(result.weatherStream);
+    const newsStream = readStreamableValue(result.newsStream);
 
-    setAnswerUI(result.answerUI);
+    // Save all stream references.
+    setResult(result);
 
-    for await (const value of isGeneratingStream) {
-      if (value != null) {
-        setIsGenerating(value);
+    // setAnswerUI(result.answerUI);
+
+    (async () => {
+      for await (const value of isGeneratingStream) {
+        if (value != null) {
+          setIsGenerating(value);
+        }
       }
-    }
+    })();
+
+    (async () => {
+      for await (const value of weatherStream) {
+        console.log(`---------------- weather: `, weather);
+        setWeather((existing) => existing + value as string);
+      }
+    })();
+
+    (async () => {
+      for await (const value of newsStream) {
+        setNews((existing) => existing + value as string);
+      }
+    })();
+
+
   }
-
-  console.log(`---------------- isGenerating: `, isGenerating);
-
-
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3 w-full">
-      <Label htmlFor="chat-input">Enter a question</Label>
       <div className="inline-block mb-4 w-full flex flex-row gap-1">
-        <Input id="chat-input" onChange={onChange} value={question} />
-        <Button type="submit">Submit</Button>
+        <Button type="submit">Generate News & Weather</Button>
       </div>
       {isGenerating ? (
         <div className="flex flex-row w-full justify-center items-center p-4 transition-all">
@@ -50,9 +71,11 @@ export function QuestionForm() {
         </div>
       ) : null}
 
-      <div className="mt-4 p-4 rounded-md shadow-md bg-slate-200">
-        {answerUI ? answerUI : null}
-      </div>
+      <h3 className="font-bold">Today's Weather</h3>
+      <div className="mt-4 p-4 rounded-md shadow-md bg-blue-100">{weather ? weather : null}</div>
+
+      <h4 className="font-bold">Today's News</h4>
+      <div className="mt-4 p-4 rounded-md shadow-md bg-green-100">{news ? news : null}</div>
     </form>
   );
 }
