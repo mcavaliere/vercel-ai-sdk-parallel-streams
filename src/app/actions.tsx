@@ -1,21 +1,20 @@
 "use server";
 
 import { openai } from "@ai-sdk/openai";
-import { streamObject, streamText } from "ai";
-import { createAI, createStreamableUI, createStreamableValue } from "ai/rsc";
-import { z } from "zod";
-
-const AnswerSchema = z.object({
-  answer: z.string(),
-  question: z.string(),
-});
+import { streamText } from "ai";
+import { createAI, createStreamableValue } from "ai/rsc";
 
 export async function streamAnswer(question: string) {
+  	// Booleans for indicating whether each stream is currently streaming
   const isGeneratingStream1 = createStreamableValue(true);
   const isGeneratingStream2 = createStreamableValue(true);
+
+  // The current stream values
   const weatherStream = createStreamableValue("");
   const newsStream = createStreamableValue("");
 
+	// Create the first stream. Notice that we don't use await here, so that we
+	//  don't block the rest of this function from running.
   streamText({
     model: openai("gpt-3.5-turbo"),
     maxTokens: 2000,
@@ -25,16 +24,22 @@ export async function streamAnswer(question: string) {
     )}?`,
   }).then(async (result) => {
     try {
+      // Read from the async iterator. Set the stream value to each new word
+		  //  received.
       for await (const value of result.textStream) {
         weatherStream.update(value || "");
       }
     } finally {
+      // Set isGenerating to false, and close that stream.
       isGeneratingStream1.update(false);
       isGeneratingStream1.done();
+
+      // Close the given stream so the request doesn't hang.
       weatherStream.done();
     }
   });
 
+  // Same thing for the second stream.
   streamText({
     model: openai("gpt-3.5-turbo"),
     maxTokens: 2000,
@@ -69,5 +74,4 @@ export const AI = createAI({
     streamAnswer,
   },
   initialUIState,
-  // initialAIState,
 });

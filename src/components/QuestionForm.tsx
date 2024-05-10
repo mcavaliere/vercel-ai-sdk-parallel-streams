@@ -8,7 +8,7 @@ import { readStreamableValue, useUIState } from "ai/rsc";
 import { streamAnswer } from "@/app/actions";
 import { Spinner } from "./svgs/Spinner";
 
-export function QuestionForm() {
+export function GenerationForm() {
   const [question, setQuestion] = useState<string>("");
   const [isGeneratingStream1, setIsGeneratingStream1] = useState<boolean>(false);
   const [isGeneratingStream2, setIsGeneratingStream2] = useState<boolean>(false);
